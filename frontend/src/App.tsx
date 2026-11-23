@@ -61,14 +61,37 @@ function TrendChart({ trends }: { trends: Trend[] }) {
     { key: 'avg_math' as const, label: 'Mathematics', color: '#2563eb' },
     { key: 'avg_ela' as const, label: 'English Language Arts', color: '#16a085' },
   ];
-  const x = (index: number) => trends.length <= 1 ? 286 : 88 + index * 395 / (trends.length - 1);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [chartWidth, setChartWidth] = useState(570);
+
+  // Match the SVG viewBox to its rendered width so axis labels remain legible on phones.
+  useEffect(() => {
+    const element = chartRef.current;
+    if (!element) return;
+    const measure = () => setChartWidth(Math.max(220, Math.round(element.clientWidth)));
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const compact = chartWidth < 420;
+  const plotLeft = compact ? 50 : 88;
+  const plotRight = chartWidth - (compact ? 25 : 87);
+  const x = (index: number) => trends.length <= 1
+    ? (plotLeft + plotRight) / 2
+    : plotLeft + index * (plotRight - plotLeft) / (trends.length - 1);
   const y = (value: number) => 182 - value * 1.45;
   const labelFor = (trend: Trend) => trend.school_year;
   return <>
     <div className="chart-legend"><span><i className="legend-dot blue-dot" />Math proficiency</span><span><i className="legend-dot teal-dot" />ELA proficiency</span></div>
-    <div className="trend-graph">
-      {trends.length === 0 ? <div className="chart-no-data">No trend data for these filters.</div> : <svg role="img" aria-label="Chart showing math and ELA average proficiency for school years" viewBox="0 0 570 224" preserveAspectRatio="xMidYMid meet">
-        {[0, 25, 50, 75, 100].map(tick => <g key={tick}><line x1="68" x2="525" y1={y(tick)} y2={y(tick)} stroke="#e9edf4" strokeDasharray="4 5"/><text x="51" y={y(tick) + 4} textAnchor="end" fill="#8b96a9" fontSize="12">{tick}%</text></g>)}
+    <div className="trend-graph" ref={chartRef}>
+      {trends.length === 0 ? <div className="chart-no-data">No trend data for these filters.</div> : <svg role="img" aria-label="Chart showing math and ELA average proficiency for school years" viewBox={`0 0 ${chartWidth} 224`} preserveAspectRatio="xMidYMid meet">
+        {[0, 25, 50, 75, 100].map(tick => <g key={tick}><line x1={plotLeft - 8} x2={chartWidth - 9} y1={y(tick)} y2={y(tick)} stroke="#e9edf4" strokeDasharray="4 5"/><text x={plotLeft - 15} y={y(tick) + 4} textAnchor="end" fill="#8b96a9" fontSize="12">{tick}%</text></g>)}
         {trends.map((trend, index) => <text key={trend.school_year} x={x(index)} y="211" textAnchor="middle" fill="#7b8798" fontSize="12">{labelFor(trend)}</text>)}
         {metrics.map(metric => {
           const points = trends.map((trend, index) => ({ x: x(index), v: trend[metric.key] })).filter((p): p is { x: number; v: number } => p.v !== null);
