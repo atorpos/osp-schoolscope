@@ -4,7 +4,7 @@
 
 > “I built SchoolScope as an independent school-performance data dashboard. The frontend is React and TypeScript, the API uses Node.js/Express, and the data are stored in PostgreSQL. The entire stack starts through Docker Compose. The dataset is fully fictional and uses 30 school-year records.”
 
-Open `http://localhost:8080`; point to the “Demo environment” label and the academic year selector.
+Open `http://localhost:3008`; point to the “Demo environment” label and the academic year selector.
 
 ## 0:45 – 1:30 | Work with filters
 
@@ -34,7 +34,7 @@ Open `docs/ARCHITECTURE.md`.
 
 > “Nginx serves the React build and reverse-proxies requests to Express. The database is only accessible over an internal Docker network. A health check prevents the API from starting before PostgreSQL is ready. Seed data are loaded transactionally and won't duplicate on restart.”
 
-Show `docker compose ps` and `curl http://localhost:8080/api/health`.
+Show `docker compose ps` and `curl http://localhost:3008/api/health`.
 
 ## 4:30 – 5:00 | Engineering quality
 
