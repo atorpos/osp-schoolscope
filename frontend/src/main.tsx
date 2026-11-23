@@ -16,6 +16,13 @@ function Root() {
 // Logs back in with the refresh cookie, if there is one
 void session.restore();
 
+// iOS Safari ignores user-scalable=no, so cancel its pinch gesture too. Pinching the map still zooms the map.
+for (const type of ['gesturestart', 'gesturechange']) {
+  document.addEventListener(type, event => {
+    if (!(event.target instanceof Element && event.target.closest('.map-stage'))) event.preventDefault();
+  }, { passive: false });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Root />
