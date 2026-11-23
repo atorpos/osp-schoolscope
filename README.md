@@ -43,6 +43,46 @@ docker compose down                     # Stop containers without deleting data
 4. The React frontend is compiled and served by Nginx. Requests beginning with `/api/` are proxied internally to the Node API.
 5. Only Nginx port `3008` is published to the host. PostgreSQL and the backend are private to the Compose network.
 
+### Docker with Amazon RDS PostgreSQL
+
+Use this option if you have an existing RDS PostgreSQL instance. It starts the API and web containers without a local PostgreSQL container.
+
+1. Create a dedicated database and user on RDS. The user needs permission to connect and create tables and indexes in the target schema, and to read and insert data. The API creates its tables and inserts fictional demo records on startup. Use a separate database or schema so it does not affect unrelated tables.
+2. Allow the Docker host to reach the RDS endpoint and configure the RDS security group to allow the host on the PostgreSQL port.
+3. Create the RDS configuration file and set the real endpoint, port, user, password, and database:
+
+   ```bash
+   cp .env.rds.example .env.rds
+   chmod 600 .env.rds
+   # Edit .env.rds; keep it private.
+   ```
+
+   Compose supports single-quoted values for passwords containing characters such as `$` or `#`. The RDS hostname must match the server certificate; use the RDS endpoint rather than an IP address. Shell environment variables override values in `.env.rds`.
+
+4. Download the AWS RDS CA bundle. The API verifies the RDS certificate and hostname using this bundle:
+
+   ```bash
+   mkdir -p certs
+   curl --fail --show-error --location \
+     https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+     -o certs/rds-ca-bundle.pem
+   ```
+
+   Keep the bundle current when AWS rotates certificates. The bundle must be present before starting the API container.
+
+5. If you already started the local PostgreSQL stack, stop it first with `docker compose down` using its original configuration. Do not add `-v`; that would delete its database volume. Switching to RDS does not migrate existing data.
+
+6. Start the RDS configuration from the project root:
+
+   ```bash
+   docker compose --env-file .env.rds -f compose.rds.yaml up -d --build
+   docker compose --env-file .env.rds -f compose.rds.yaml ps
+   docker compose --env-file .env.rds -f compose.rds.yaml logs --tail=50 api
+   curl --fail http://127.0.0.1:3008/api/health
+   ```
+
+Use the same `--env-file .env.rds -f compose.rds.yaml` options for other Compose commands. The example health URL assumes `APP_PORT=3008`. To stop this stack, run `docker compose --env-file .env.rds -f compose.rds.yaml down`; it does not delete RDS data.
+
 ### Development without Docker
 
 You need Node.js 22+, PostgreSQL 16+, and npm. Create a local PostgreSQL database and user; use `backend/.env.example` as a reference.
@@ -127,6 +167,8 @@ For reproducibility, commit generated `package-lock.json` files after your first
 ```text
 schoolscope/
 ├── compose.yaml                   # DB + API + web services, persistent volume
+├── compose.rds.yaml               # API + web using external RDS PostgreSQL
+├── .env.rds.example               # RDS connection settings template
 ├── .env.example                   # Local demo configuration
 ├── frontend/
 │   ├── src/App.tsx                # Dashboard, graphs, filters, detail drawer
