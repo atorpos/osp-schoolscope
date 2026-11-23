@@ -1,4 +1,6 @@
 .env
+.env.rds
+certs/rds-ca-bundle.pem
 **/node_modules/
 **/dist/
 **/.vite/
