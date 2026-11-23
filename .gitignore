@@ -10,3 +10,6 @@ certs/rds-ca-bundle.pem
 
 # Local SQLite databases
 *.sqlite*
+
+# Apple MapKit private keys
+*.p8

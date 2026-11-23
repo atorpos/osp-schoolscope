@@ -9,6 +9,13 @@ export function mean(values: Array<number | null | undefined>): number | null {
   return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
 }
 
+/** "App Reviewer" -> "AR", for the avatar */
+export function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const letters = words.length > 1 ? [words[0], words.at(-1)!] : words;
+  return letters.map(word => [...word][0] ?? '').join('').toUpperCase() || '?';
+}
+
 export function scoreTone(value: number | null): 'strong' | 'moderate' | 'attention' | 'missing' {
   if (value === null) return 'missing';
   if (value >= 80) return 'strong';

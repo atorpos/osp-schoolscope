@@ -1,7 +1,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
@@ -12,7 +12,7 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app \
     && mkdir -p /app/storage && chown app:app /app/storage
 COPY package*.json ./
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY data ./data
 USER app

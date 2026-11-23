@@ -4,10 +4,18 @@ import cors from 'cors';
 import { pool, closePool } from './db.js';
 import { migrateAndSeed } from './seed.js';
 import { parseFilters, buildWhere, orderBy } from './filters.js';
+import { asyncRoute } from './http.js';
+import { syncDemoAccounts } from './auth/accounts.js';
+import { authRouter, requireAuth } from './auth/router.js';
+import { migrateAuth } from './auth/schema.js';
+import { locationsRouter, seedLocations } from './locations.js';
+import { mapKitRouter } from './mapkit.js';
 import type { SchoolRecord } from './types.js';
 
 const app = express();
 app.disable('x-powered-by');
+// Behind Nginx (Docker) or the Vite dev proxy: take the client address and HTTPS from X-Forwarded-*
+app.set('trust proxy', 'loopback, uniquelocal');
 app.use(helmet());
 app.use(cors({ origin: process.env.NODE_ENV === 'production' ? false : ['http://localhost:5173', 'http://127.0.0.1:5173'] }));
 app.use(express.json({ limit: '32kb' }));
@@ -19,14 +27,20 @@ const schoolColumns = `
 `;
 const fromSchools = `FROM school_performance p JOIN schools s ON p.dbn = s.dbn`;
 
-const asyncRoute = (handler: express.RequestHandler): express.RequestHandler => (req, res, next) => {
-  Promise.resolve(handler(req, res, next)).catch(next);
-};
-
 app.get('/api/health', asyncRoute(async (_req, res) => {
   await pool.query('SELECT 1');
   res.json({ status: 'ok', database: 'connected', application: 'SchoolScope API' });
 }));
+
+// Log in, renew and log out are open; every other endpoint needs a logged-in user
+app.use('/api/auth', authRouter);
+app.use('/api', requireAuth);
+
+app.get('/api/users/me', (_req, res) => {
+  res.json({ user: res.locals.user });
+});
+app.use('/api/locations', locationsRouter);
+app.use('/api/mapkit', mapKitRouter());
 
 app.get('/api/metadata', asyncRoute(async (req, res) => {
   const year = typeof req.query.year === 'string' ? req.query.year : '2025-26';
@@ -103,6 +117,9 @@ app.use(handleError);
 const port = Number(process.env.PORT || 4000);
 async function start() {
   await migrateAndSeed();
+  seedLocations();
+  migrateAuth();
+  await syncDemoAccounts();
   const server = app.listen(port, '0.0.0.0', () => console.info(`SchoolScope API listening on :${port}`));
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, () => {
