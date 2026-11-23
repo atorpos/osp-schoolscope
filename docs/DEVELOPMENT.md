@@ -52,4 +52,4 @@ cd backend && npm test
 cd ../frontend && npm test
 ```
 
-The repo intentionally doesn't commit package-lock files. After running npm install, commit both generated lock files and switch Dockerfiles to `npm ci` to obtain reproducible dependency resolution.
+Both package-lock files are committed and the Dockerfiles use `npm ci` for reproducible dependency resolution. After adding or upgrading a dependency with `npm install`, commit the updated lock file.

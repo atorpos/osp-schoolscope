@@ -202,7 +202,7 @@ cd ../frontend && npm install && npm test && npm run build
 cd .. && SMOKE_EMAIL=reviewer@example.com SMOKE_PASSWORD='…' ./scripts/smoke-test.sh
 ```
 
-For reproducibility, commit generated `package-lock.json` files after your first successful `npm install`. This handoff does not include generated lock files, since npm registry access was unavailable in the authoring environment. Dockerfiles therefore use `npm install`, not `npm ci`.
+Both `package-lock.json` files are committed, and the Dockerfiles install with `npm ci`, so every build gets the same dependency versions. After changing dependencies, run `npm install` and commit the updated lock file.
 
 ## Repository structure
 
