@@ -21,7 +21,8 @@
     "noFallthroughCasesInSwitch": true,
     "types": [
       "vite/client",
-      "node"
+      "node",
+      "apple-mapkit-js-browser"
     ]
   },
   "include": [

@@ -7,6 +7,15 @@ services:
       NODE_ENV: production
       PORT: 4000
       SQLITE_PATH: /app/storage/schoolscope.sqlite
+      # Reviewer accounts and login settings (see README → "Reviewer accounts")
+      DEMO_ACCOUNTS: ${DEMO_ACCOUNTS:-}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-auto}
+      # Apple Maps (see README → "Apple Maps"); without them the map is drawn without MapKit
+      MAPKIT_TEAM_ID: ${MAPKIT_TEAM_ID:-}
+      MAPKIT_KEY_ID: ${MAPKIT_KEY_ID:-}
+      MAPKIT_PRIVATE_KEY: ${MAPKIT_PRIVATE_KEY:-}
+      MAPKIT_ORIGIN: ${MAPKIT_ORIGIN:-}
     volumes:
       - sqlite_data:/app/storage
     healthcheck:

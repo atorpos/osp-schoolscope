@@ -1,14 +1,14 @@
 # Architecture & data decisions
 
 ```text
-Browser (React + TypeScript)
-        |
-        | HTTP (same origin)    :3008
-        v
-Nginx — static Vite build
-        |  /api/* reverse proxy
-        v
-Express API (Node.js + TypeScript) :4000  [internal only]
+Browser (React + TypeScript) ─────────── MapKit JS ───> Apple Maps (cdn.apple-mapkit.com)
+        |                                   ^
+        | HTTP (same origin)    :3008       | token from GET /api/mapkit/token
+        v                                   |
+Nginx — static Vite build, gzip            |
+        |  /api/* reverse proxy             |
+        v                                   |
+Express API (Node.js + TypeScript) :4000  [internal only] — signs MapKit tokens with the .p8 key
         |
         | parameterized SQL
         v
@@ -16,6 +16,38 @@ SQLite database file                    [inside API volume]
         |
     Docker volume: sqlite_data
 ```
+
+## Login (ported from the VgemsAI app)
+
+```text
+POST /api/auth/login {email, password}
+  -> 200 {accessToken (HS256 JWT, 60 min), expiresIn, refreshExpiresIn, user}
+     Set-Cookie: schoolscope_refresh=<random 256-bit token>; HttpOnly; SameSite=Strict; Path=/api/auth; (Secure on HTTPS)
+     Set-Cookie: schoolscope_signed_in=1; Path=/        <- readable hint, no secret
+
+GET /api/... with Authorization: Bearer <accessToken>
+  -> 401 when the token is invalid/expired or its login ended; the web app renews once and retries
+
+POST /api/auth/refresh (cookie)
+  -> 200 new access token + new refresh cookie; the old refresh token is now "previous"
+  -> 409 when the previous token is sent again within 10 s (another tab renewed at the same moment): retry
+  -> 401 when the previous token is sent again later (possible theft): the whole login is ended
+```
+
+- `users`: email (lowercased, unique), name, scrypt password hash (`N=16384, r=8, p=1`, 16-byte salt), disabled flag.
+- `auth_sessions`: one row per login (browser). It holds a SHA-256 of the current refresh token, the one it replaced and when, the expiry (sliding 30 days), user agent and IP, and `revoked_at`. Tokens themselves are never stored.
+- `requireAuth` verifies the JWT and then checks its session row, so logging out or changing a password takes effect immediately, not only when the access token expires.
+- Access tokens live in memory in the browser, not in `localStorage`, so injected scripts can't read a long-lived credential. Renewal runs once at a time per tab and takes turns across tabs (Web Locks) because the cookie is shared.
+- Brute force: in-memory counters per address+email (8 / 15 min) and per address (40 / 15 min). A missing email still checks a dummy hash, so its answer takes as long as a wrong password.
+- Accounts come from `DEMO_ACCOUNTS` (synced on start) or `accounts-cli`. There is no sign-up endpoint.
+
+## Real school locations and the map
+
+- `school_locations` is reference data. It is reloaded from `data/school_locations.json` on every start, in one transaction. The fictional `schools` / `school_performance` tables are untouched, and the two datasets are not joined.
+- `scripts/fetch-nyc-schools.mjs` builds that file from NYC Open Data: the Facilities Database for the current schools, School Districts for the boundaries (Douglas–Peucker simplified, ~250 KB), and DOE 2019–20 locations for DBNs where the names agree. See the README for the matching rules.
+- `/api/locations` validates `district` (1–32) and `borough` / `sector` / `level` against values in the data, then filters with positional parameters. Search is a case-insensitive substring match on name, DBN and address.
+- MapKit JS needs a JWT signed with an Apple MapKit key (`ES256`, `kid` = Key ID, `iss` = Team ID, optional `origin`). The API signs 30-minute tokens. The key never reaches the browser, and the token endpoint needs a login. MapKit's `authorizationCallback` fetches a new token when needed.
+- The browser asks for a token before loading Apple's script. A 503 (no key) or an "Unauthorized" error from MapKit (bad key or origin) switches to an SVG map of the same data, so the section always works.
 
 ## Domain model
 
@@ -61,5 +93,7 @@ School-year results are represented in a separate table to prevent duplicate sch
 - Nginx has no HTTPS termination; add a reverse proxy / load balancer with TLS for production.
 - Data migrations in `seed.ts` are intentionally simple. For multi-developer production projects use a versioned migration tool appropriate to the chosen database.
 - `SELECT ... JOIN` is efficient for a tiny set. For a much larger directory, add keyset pagination and query-plan/index review.
-- No authentication or PII is included; adding real student records would require a significantly different privacy/security design.
+- Login is for invited reviewers only: no roles, sign-up, email verification or SSO. Login rate limits live in memory, which suits one API process. Several processes would need a shared store.
+- No student records or other PII beyond reviewer names and emails. Adding real student records would require a significantly different privacy/security design.
+- The location snapshot is committed instead of fetched at runtime, so the app starts offline and the data are reviewable in Git. Refreshing it is a deliberate step.
 - ELA and math chart averages are school-level unweighted means, not enrollment-weighted or student-level statistics.

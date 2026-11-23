@@ -2,19 +2,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, AlertCircle, ArrowRight, ArrowUpRight, BarChart3, BookOpen,
   CheckCircle2, ChevronRight, Download, GraduationCap,
-  Info, LayoutDashboard, MapPin, Menu, RotateCcw, School2, Search,
+  Info, LayoutDashboard, LogOut, Map as MapIcon, MapPin, Menu, RotateCcw, School2, Search,
   Users, X,
 } from 'lucide-react';
 import { api } from './api';
-import { downloadCSV, formatPercent, mean, scoreTone } from './utils';
+import { BrandMark } from './LoginPage';
+import { SchoolMapSection } from './SchoolMap';
+import { session, type User } from './session';
+import { downloadCSV, formatPercent, initials, mean, scoreTone } from './utils';
 import type { Filters, Metadata, SchoolRecord, Summary, Trend } from './types';
 
 const INITIAL_FILTERS: Filters = {
   year: '2025-26', district: '', borough: '', search: '', sort: 'math_desc',
 };
 
-function BrandMark() {
-  return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
+function UserMenu({ user }: { user: User }) {
+  return <div className="user-menu">
+    <span className="avatar" aria-hidden="true">{initials(user.name)}</span>
+    <span className="user-menu-text"><strong>{user.name}</strong><span>{user.email}</span></span>
+    <button className="logout-button" onClick={() => session.logOut()} title="Log out"><LogOut size={17} /><span>Log out</span></button>
+  </div>;
 }
 
 function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
@@ -27,12 +34,13 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         <a className="nav-item active" href="#overview" onClick={onClose}><LayoutDashboard size={18} />Overview<span className="nav-indicator" /></a>
         <a className="nav-item" href="#school-directory" onClick={onClose}><School2 size={18} />School directory</a>
         <a className="nav-item" href="#insights" onClick={onClose}><BarChart3 size={18} />Performance insights</a>
+        <a className="nav-item" href="#school-map" onClick={onClose}><MapIcon size={18} />School map</a>
       </nav>
       <div className="sidebar-section-title sidebar-section-secondary">ABOUT THIS DEMO</div>
       <div className="sidebar-explainer"><GraduationCap size={18} /><div><strong>Portfolio project</strong><span>Designed for an education-data web developer assessment.</span></div></div>
       <div className="sidebar-bottom">
-        <div className="environment"><span className="environment-dot" /><div><strong>Demo environment</strong><span>Fictional data only</span></div></div>
-        <div className="sidebar-small">React · TypeScript · Node.js<br />SQLite · Docker</div>
+        <div className="environment"><span className="environment-dot" /><div><strong>Demo environment</strong><span>Real school locations · fictional scores</span></div></div>
+        <div className="sidebar-small">React · TypeScript · Node.js<br />SQLite · MapKit JS · Docker</div>
       </div>
     </aside>
   </>;
@@ -136,7 +144,7 @@ function SchoolDetail({ dbn, onClose }: { dbn: string; onClose: () => void }) {
   </div>;
 }
 
-function App() {
+function App({ user }: { user: User }) {
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
   const [searchInput, setSearchInput] = useState('');
   const [metadata, setMetadata] = useState<Metadata | null>(null);
@@ -195,7 +203,7 @@ function App() {
   return <div className="app-shell" id="overview">
     <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
     <main className="main-content">
-      <div className="topbar"><div className="breadcrumb"><button className="menu-toggle" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu size={22}/></button><span>Workspace</span><ChevronRight size={14}/><strong>Overview</strong></div><div className="topbar-right"><span className="demo-badge"><span /> DEMO ENVIRONMENT</span><span className="avatar">WD</span></div></div>
+      <div className="topbar"><div className="breadcrumb"><button className="menu-toggle" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu size={22}/></button><span>Workspace</span><ChevronRight size={14}/><strong>Overview</strong></div><div className="topbar-right"><span className="demo-badge"><span /> DEMO ENVIRONMENT</span><UserMenu user={user} /></div></div>
       <div className="content-wrap">
         <section className="hero">
           <div className="hero-topline"><span className="eyebrow"><span className="eyebrow-line" /> SCHOOL PERFORMANCE / ANALYTICS</span><span className="hero-pill"><CheckCircle2 size={14}/> Practice project</span></div>
@@ -223,6 +231,8 @@ function App() {
           </div>
         </section>
 
+        <SchoolMapSection />
+
         <section id="school-directory" className="directory-section panel">
           <div className="directory-header"><div><h2>School directory</h2><p>Search, compare, and explore individual schools</p></div><button type="button" className="export-button" disabled={!loaded || schools.length === 0} onClick={() => downloadCSV(schools, filters.year)}><Download size={17}/> Export CSV</button></div>
           <div className="filter-panel">
@@ -243,7 +253,7 @@ function App() {
           <div className="table-footer"><div><Info size={15}/> Missing values display as N/A. Zero is a valid score.</div><span>Showing {loaded ? schools.length : 0} records</span></div>
         </section>
 
-        <footer className="page-footer"><div><BrandMark/><span>SchoolScope · Independent educational portfolio demonstration</span></div><span>Fictional school data · Not affiliated with NYC Public Schools</span></footer>
+        <footer className="page-footer"><div><BrandMark/><span>SchoolScope · Independent educational portfolio demonstration</span></div><span>School locations: NYC Open Data · Performance figures are fictional · Not affiliated with NYC Public Schools</span></footer>
       </div>
     </main>
     {selectedDbn && <SchoolDetail dbn={selectedDbn} onClose={closeDetail}/>}
