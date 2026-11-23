@@ -2,7 +2,7 @@
 
 ## 0:00 – 0:45 | Overview
 
-> “I built SchoolScope as an independent school-performance data dashboard. The frontend is React and TypeScript, the API uses Node.js/Express, and the data are stored in PostgreSQL. The entire stack starts through Docker Compose. The dataset is fully fictional and uses 30 school-year records.”
+> “I built SchoolScope as an independent school-performance data dashboard. The frontend is React and TypeScript, the API uses Node.js/Express, and the data are stored in SQLite. The entire stack starts through Docker Compose. The dataset is fully fictional and uses 30 school-year records.”
 
 Open `http://localhost:3008`; point to the “Demo environment” label and the academic year selector.
 
@@ -32,7 +32,7 @@ Open `http://localhost:3008`; point to the “Demo environment” label and the 
 
 Open `docs/ARCHITECTURE.md`.
 
-> “Nginx serves the React build and reverse-proxies requests to Express. The database is only accessible over an internal Docker network. A health check prevents the API from starting before PostgreSQL is ready. Seed data are loaded transactionally and won't duplicate on restart.”
+> “Nginx serves the React build and reverse-proxies requests to Express. The SQLite file is stored in a persistent Docker volume, and the frontend waits for the API health check. Seed data are loaded transactionally and won't duplicate on restart.”
 
 Show `docker compose ps` and `curl http://localhost:3008/api/health`.
 
@@ -42,7 +42,7 @@ Show `docker compose ps` and `curl http://localhost:3008/api/health`.
 
 ## Questions interviewers may ask
 
-**Why PostgreSQL instead of MongoDB?** School-year performance is relational and benefits from foreign keys, uniqueness constraints, aggregation, and SQL filtering. MongoDB could also store this data, but PostgreSQL makes reporting relationships and constraints straightforward.
+**Why SQLite?** This small demonstration benefits from SQL relationships and constraints without running a separate database service. A larger deployment with multiple writers could use managed PostgreSQL.
 
 **Why not calculate averages only on the frontend?** Server-side aggregations use the same filter logic as the records, avoid transferring every record for large datasets, and centralize important rules. The client computes only the district snapshot over the currently fetched small result set.
 

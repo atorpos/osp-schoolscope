@@ -14,8 +14,8 @@ app.use(express.json({ limit: '32kb' }));
 
 const schoolColumns = `
   p.school_year, s.dbn, s.school_name, s.district, s.borough,
-  p.enrollment, p.attendance_pct::float8 AS attendance_pct,
-  p.math_pct::float8 AS math_pct, p.ela_pct::float8 AS ela_pct
+  p.enrollment, p.attendance_pct AS attendance_pct,
+  p.math_pct AS math_pct, p.ela_pct AS ela_pct
 `;
 const fromSchools = `FROM school_performance p JOIN schools s ON p.dbn = s.dbn`;
 
@@ -33,9 +33,9 @@ app.get('/api/metadata', asyncRoute(async (req, res) => {
   if (!/^20\d{2}-\d{2}$/.test(year)) return void res.status(400).json({ error: 'Invalid school year' });
   const [years, districts, boroughs, count] = await Promise.all([
     pool.query<{ school_year: string }>('SELECT DISTINCT school_year FROM school_performance ORDER BY school_year DESC'),
-    pool.query<{ district: number }>(`SELECT DISTINCT s.district ${fromSchools} WHERE p.school_year = $1 ORDER BY s.district`, [year]),
-    pool.query<{ borough: string }>(`SELECT DISTINCT s.borough ${fromSchools} WHERE p.school_year = $1 ORDER BY s.borough`, [year]),
-    pool.query<{ count: number }>('SELECT COUNT(*)::int AS count FROM school_performance'),
+    pool.query<{ district: number }>(`SELECT DISTINCT s.district ${fromSchools} WHERE p.school_year = ? ORDER BY s.district`, [year]),
+    pool.query<{ borough: string }>(`SELECT DISTINCT s.borough ${fromSchools} WHERE p.school_year = ? ORDER BY s.borough`, [year]),
+    pool.query<{ count: number }>('SELECT COUNT(*) AS count FROM school_performance'),
   ]);
   res.json({ years: years.rows.map(r => r.school_year), districts: districts.rows.map(r => r.district), boroughs: boroughs.rows.map(r => r.borough), records: count.rows[0]?.count ?? 0, isDemo: true });
 }));
@@ -52,14 +52,14 @@ app.get('/api/summary', asyncRoute(async (req, res) => {
   const filters = parseFilters(req.query);
   const { where, values } = buildWhere(filters);
   const { rows } = await pool.query(`
-    SELECT COUNT(*)::int AS school_count,
-      ROUND(AVG(p.math_pct), 1)::float8 AS avg_math,
-      ROUND(AVG(p.ela_pct), 1)::float8 AS avg_ela,
-      ROUND(AVG(p.attendance_pct), 1)::float8 AS avg_attendance,
-      COUNT(p.math_pct)::int AS math_reporting,
-      COUNT(p.ela_pct)::int AS ela_reporting,
-      COUNT(p.attendance_pct)::int AS attendance_reporting,
-      COALESCE(SUM(p.enrollment), 0)::int AS enrolled_students
+    SELECT COUNT(*) AS school_count,
+      ROUND(AVG(p.math_pct), 1) AS avg_math,
+      ROUND(AVG(p.ela_pct), 1) AS avg_ela,
+      ROUND(AVG(p.attendance_pct), 1) AS avg_attendance,
+      COUNT(p.math_pct) AS math_reporting,
+      COUNT(p.ela_pct) AS ela_reporting,
+      COUNT(p.attendance_pct) AS attendance_reporting,
+      COALESCE(SUM(p.enrollment), 0) AS enrolled_students
     ${fromSchools} ${where}
   `, values);
   res.json(rows[0]);
@@ -70,10 +70,10 @@ app.get('/api/trends', asyncRoute(async (req, res) => {
   const { where, values } = buildWhere(filters, false);
   const { rows } = await pool.query(`
     SELECT p.school_year,
-      COUNT(*)::int AS school_count,
-      ROUND(AVG(p.math_pct), 1)::float8 AS avg_math,
-      ROUND(AVG(p.ela_pct), 1)::float8 AS avg_ela,
-      ROUND(AVG(p.attendance_pct), 1)::float8 AS avg_attendance
+      COUNT(*) AS school_count,
+      ROUND(AVG(p.math_pct), 1) AS avg_math,
+      ROUND(AVG(p.ela_pct), 1) AS avg_ela,
+      ROUND(AVG(p.attendance_pct), 1) AS avg_attendance
     ${fromSchools} ${where}
     GROUP BY p.school_year ORDER BY p.school_year
   `, values);
@@ -83,7 +83,7 @@ app.get('/api/trends', asyncRoute(async (req, res) => {
 app.get('/api/schools/:dbn/history', asyncRoute(async (req, res) => {
   const { rows } = await pool.query<SchoolRecord>(`
     SELECT ${schoolColumns} ${fromSchools}
-    WHERE s.dbn = $1 ORDER BY p.school_year DESC
+    WHERE s.dbn = ? ORDER BY p.school_year DESC
   `, [req.params.dbn]);
   if (!rows.length) return void res.status(404).json({ error: 'School not found' });
   res.json({ history: rows });
