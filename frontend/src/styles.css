@@ -13,7 +13,8 @@
   --teal: #16a085;
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+/* No pinch or double-tap page zoom (iOS Safari ignores user-scalable=no); the map handles its own gestures */
+html { scroll-behavior: smooth; touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; min-width: 320px; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
@@ -48,7 +49,8 @@ a { color: inherit; }
 .environment { display:flex; gap:10px; align-items:flex-start; }
 .environment-dot { width:8px; height:8px; border-radius:50%; background:#6de1af; box-shadow:0 0 0 4px rgba(109,225,175,.10); margin-top:6px !important; flex:none; }
 .sidebar-small { color:#7e9db7; font-size:10px; line-height:1.85; margin:25px 0 0; }
-.main-content { width:calc(100% - 254px); min-width:0; margin-left:254px; }
+/* overflow-x:clip: nothing in the page can make it wider than the screen (and it isn't a scroll container) */
+.main-content { width:calc(100% - 254px); min-width:0; margin-left:254px; overflow-x:clip; }
 .topbar { height:73px; padding:0 40px; background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
 .breadcrumb, .topbar-right { display:flex; align-items:center; gap:13px; }
 .breadcrumb { color:#95a1ae; font-size:12px; }
@@ -143,7 +145,9 @@ h2, h3, p { margin-top:0; }
 .table-year { color:#a3afbc; }
 .table-meta > div:last-child { color:#9ba6b3; font-size:10px; }
 .table-key-dot { display:inline-block; height:7px; width:7px; background:#74c6b9; border-radius:50%; margin-right:5px; }
-.table-scroll { width:100%; overflow-x:auto; }
+/* position:relative keeps absolutely positioned children (the .sr-only "Details" header) inside the scroller;
+   without it they stretch the page past the phone's width and iOS zooms the whole page out */
+.table-scroll { width:100%; overflow-x:auto; position:relative; }
 .school-table { width:100%; border-collapse:collapse; text-align:left; min-width:790px; }
 .school-table th { color:#8c99a8; font-size:10px; font-weight:750; letter-spacing:.25px; padding:15px 14px; background:#fcfdff; white-space:nowrap; }
 .school-table th:first-child, .school-table td:first-child { padding-left:23px; width:28%; }
