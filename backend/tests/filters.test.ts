@@ -17,8 +17,8 @@ test('rejects unsafe invalid filter input', () => {
 test('uses parameterized SQL and safe fixed sort expressions', () => {
   const input = parseFilters({ district: '2', borough: 'Manhattan', search: '%_test' });
   const result = buildWhere(input);
-  assert.ok(result.where.includes('ILIKE $4'));
-  assert.equal(result.values.length, 4);
-  assert.ok(result.values[3] !== '%_test');
+  assert.ok(result.where.includes('INSTR(casefold(s.school_name), casefold(?))'));
+  assert.equal(result.values.length, 5);
+  assert.equal(result.values[3], '%_test');
   assert.ok(orderBy('math_asc').includes('NULLS LAST'));
 });

@@ -24,21 +24,20 @@ export function parseFilters(input: Record<string, unknown>): Filters {
   return { year, district, borough, search, sort: rawSort as Filters['sort'] };
 }
 
-export function buildWhere(filters: Filters, includeYear = true): { where: string; values: unknown[] } {
+export function buildWhere(filters: Filters, includeYear = true): { where: string; values: (string | number)[] } {
   const clauses: string[] = [];
-  const values: unknown[] = [];
-  const add = (clause: string, value: unknown) => {
+  const values: (string | number)[] = [];
+  const add = (clause: string, value: string | number) => {
     values.push(value);
-    clauses.push(clause.replace('?', `$${values.length}`));
+    clauses.push(clause);
   };
 
   if (includeYear) add('p.school_year = ?', filters.year);
   if (filters.district !== null) add('s.district = ?', filters.district);
   if (filters.borough) add('s.borough = ?', filters.borough);
   if (filters.search) {
-    values.push(`%${filters.search.replace(/[\\%_]/g, '\\$&')}%`);
-    const last = values.length;
-    clauses.push(`(s.school_name ILIKE $${last} ESCAPE '\\' OR s.dbn ILIKE $${last} ESCAPE '\\')`);
+    values.push(filters.search, filters.search);
+    clauses.push('(INSTR(casefold(s.school_name), casefold(?)) > 0 OR INSTR(casefold(s.dbn), casefold(?)) > 0)');
   }
   return { where: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '', values };
 }

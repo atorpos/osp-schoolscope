@@ -9,9 +9,9 @@ A **full-stack, presentation-ready portfolio project** inspired by the requireme
 | Layer | Technology | Purpose |
 | --- | --- | --- |
 | Frontend | React 19, TypeScript, Vite | Responsive dashboard, accessible filters, charts, CSV export |
-| Backend | Node.js 22, Express, TypeScript | REST API, validation, parameterized PostgreSQL queries |
-| Database | PostgreSQL 16 | School metadata and yearly reporting records |
-| Deployment | Docker Compose, multi-stage Dockerfiles, Nginx | One-command launch, internal API/database network |
+| Backend | Node.js 22, Express, TypeScript | REST API, validation, parameterized SQLite queries |
+| Database | SQLite | School metadata and yearly reporting records |
+| Deployment | Docker Compose, multi-stage Dockerfiles, Nginx | One-command launch, API and persistent database volume |
 | Testing | Node.js test runner, Vitest, curl | Filter unit tests, UI utility unit tests, smoke checks |
 
 ## Quick start: Docker (recommended)
@@ -19,8 +19,8 @@ A **full-stack, presentation-ready portfolio project** inspired by the requireme
 Install **Docker Engine + Docker Compose V2** or Docker Desktop. In the project root:
 
 ```bash
-cp .env.example .env
-# Edit .env and choose a strong POSTGRES_PASSWORD.
+test -f .env || cp .env.example .env
+# Optionally edit APP_PORT in .env.
 docker compose up --build -d
 ```
 
@@ -33,67 +33,26 @@ docker compose logs -f api              # Backend/migration logs
 docker compose down                     # Stop containers without deleting data
 ```
 
-**Important:** `docker compose down -v` removes the PostgreSQL data volume. Do that only when you intend to reset the demo data.
+**Important:** `docker compose down -v` removes the SQLite data volume. Do that only when you intend to reset the demo data.
 
 ### What happens on startup?
 
-1. PostgreSQL initializes with a persistent Docker volume and a readiness health check.
-2. The Node API waits until PostgreSQL is healthy, then creates two tables and indices if needed.
-3. The API seeds the **same 30 fictional school-year records** used in the earlier two-hour mock exercise. Seed inserts are idempotent; restarting does not duplicate or overwrite existing records.
-4. The React frontend is compiled and served by Nginx. Requests beginning with `/api/` are proxied internally to the Node API.
-5. Only Nginx port `3008` is published to the host. PostgreSQL and the backend are private to the Compose network.
+1. The API opens a SQLite database in a persistent Docker volume and creates the tables and indexes if needed.
+2. The API seeds the same 30 fictional school-year records. Seed inserts are idempotent; restarting does not duplicate or overwrite existing records.
+3. Nginx serves the React frontend and proxies requests beginning with `/api/` to the API.
+4. The web service is published on host port `3008` by default; the API is private to the Compose network.
 
-### Docker with Amazon RDS PostgreSQL
-
-Use this option if you have an existing RDS PostgreSQL instance. It starts the API and web containers without a local PostgreSQL container.
-
-1. Create a dedicated database and user on RDS. The user needs permission to connect and create tables and indexes in the target schema, and to read and insert data. The API creates its tables and inserts fictional demo records on startup. Use a separate database or schema so it does not affect unrelated tables.
-2. Allow the Docker host to reach the RDS endpoint and configure the RDS security group to allow the host on the PostgreSQL port.
-3. Create the RDS configuration file and set the real endpoint, port, user, password, and database:
-
-   ```bash
-   cp .env.rds.example .env.rds
-   chmod 600 .env.rds
-   # Edit .env.rds; keep it private.
-   ```
-
-   Compose supports single-quoted values for passwords containing characters such as `$` or `#`. The RDS hostname must match the server certificate; use the RDS endpoint rather than an IP address. Shell environment variables override values in `.env.rds`.
-
-4. Download the AWS RDS CA bundle. The API verifies the RDS certificate and hostname using this bundle:
-
-   ```bash
-   mkdir -p certs
-   curl --fail --show-error --location \
-     https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
-     -o certs/rds-ca-bundle.pem
-   ```
-
-   Keep the bundle current when AWS rotates certificates. The bundle must be present before starting the API container.
-
-5. If you already started the local PostgreSQL stack, stop it first with `docker compose down` using its original configuration. Do not add `-v`; that would delete its database volume. Switching to RDS does not migrate existing data.
-
-6. Start the RDS configuration from the project root:
-
-   ```bash
-   docker compose --env-file .env.rds -f compose.rds.yaml up -d --build
-   docker compose --env-file .env.rds -f compose.rds.yaml ps
-   docker compose --env-file .env.rds -f compose.rds.yaml logs --tail=50 api
-   curl --fail http://127.0.0.1:3008/api/health
-   ```
-
-Use the same `--env-file .env.rds -f compose.rds.yaml` options for other Compose commands. The example health URL assumes `APP_PORT=3008`. To stop this stack, run `docker compose --env-file .env.rds -f compose.rds.yaml down`; it does not delete RDS data.
+**Switching from PostgreSQL or RDS:** This version creates a new SQLite database from the fictional seed data. It does not migrate data from an existing PostgreSQL volume or RDS. Back up any data you need before switching. If the old Compose stack is running, stop it before updating: use `docker compose down` for the local database stack or `docker compose --env-file .env.rds -f compose.rds.yaml down` for the RDS stack. Do not add `-v`. This does not delete the old PostgreSQL volume or any RDS resources.
 
 ### Development without Docker
 
-You need Node.js 22+, PostgreSQL 16+, and npm. Create a local PostgreSQL database and user; use `backend/.env.example` as a reference.
+You need Node.js 22.13 or later and npm. The API creates its local SQLite file automatically. Set `SQLITE_PATH` to choose another file, or see `backend/.env.example` for the default.
 
 Terminal A — backend:
 
 ```bash
 cd backend
 npm install
-# Set DATABASE_URL in your terminal or use an environment loader:
-export DATABASE_URL='postgres://schoolscope:local_password@localhost:5432/schoolscope'
 npm run dev
 ```
 
@@ -105,7 +64,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**. Vite proxies `/api` requests to `http://localhost:4000`. You can run the backend from Node while keeping only PostgreSQL in a container (see `docs/DEVELOPMENT.md`).
+Open **http://localhost:5173**. Vite proxies `/api` requests to `http://localhost:4000`. See `docs/DEVELOPMENT.md` for other development options.
 
 **Want a quick look at the design?** Open `docs/STATIC_DESIGN_PREVIEW.html` locally. It is a non-interactive visual mockup; the actual React app is served by Docker.
 
@@ -135,7 +94,7 @@ All URLs are same-origin through Nginx; requests use JSON.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| GET | `/api/health` | Verify API and PostgreSQL connectivity |
+| GET | `/api/health` | Verify API and SQLite connectivity |
 | GET | `/api/metadata?year=2025-26` | Years, districts, boroughs, total seeded rows |
 | GET | `/api/schools?year=2025-26&district=2&sort=math_desc` | Pageless filtered school directory |
 | GET | `/api/summary?year=2025-26&borough=Queens` | KPI averages for filtered results |
@@ -166,9 +125,7 @@ For reproducibility, commit generated `package-lock.json` files after your first
 
 ```text
 schoolscope/
-├── compose.yaml                   # DB + API + web services, persistent volume
-├── compose.rds.yaml               # API + web using external RDS PostgreSQL
-├── .env.rds.example               # RDS connection settings template
+├── compose.yaml                   # API + web services, persistent SQLite volume
 ├── .env.example                   # Local demo configuration
 ├── frontend/
 │   ├── src/App.tsx                # Dashboard, graphs, filters, detail drawer

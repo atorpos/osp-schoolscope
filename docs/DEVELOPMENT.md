@@ -3,8 +3,7 @@
 ## All Docker
 
 ```bash
-cp .env.example .env
-# Set POSTGRES_PASSWORD
+test -f .env || cp .env.example .env
 
 docker compose up --build -d
 ```
@@ -36,18 +35,9 @@ services:
 
 Start with `docker compose -f compose.yaml -f compose.dev.yaml up -d --build`.
 
-## Backend dev against Docker PostgreSQL
+## Backend development with SQLite
 
-You can similarly expose PostgreSQL **only on loopback** by adding this local `compose.dev.yaml`:
-
-```yaml
-services:
-  database:
-    ports:
-      - "127.0.0.1:5432:5432"
-```
-
-Then set `DATABASE_URL` with the database name/username/password from `.env`, and run `cd backend && npm run dev`.
+Run `cd backend && npm install && npm run dev` with Node.js 22.13 or later. By default, the API creates `backend/data/schoolscope.sqlite`; set `SQLITE_PATH` to use another file. The database is seeded on startup.
 
 ## Full system verification
 

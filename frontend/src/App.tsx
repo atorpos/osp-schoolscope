@@ -32,7 +32,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
       <div className="sidebar-explainer"><GraduationCap size={18} /><div><strong>Portfolio project</strong><span>Designed for an education-data web developer assessment.</span></div></div>
       <div className="sidebar-bottom">
         <div className="environment"><span className="environment-dot" /><div><strong>Demo environment</strong><span>Fictional data only</span></div></div>
-        <div className="sidebar-small">React · TypeScript · Node.js<br />PostgreSQL · Docker</div>
+        <div className="sidebar-small">React · TypeScript · Node.js<br />SQLite · Docker</div>
       </div>
     </aside>
   </>;
@@ -203,7 +203,7 @@ function App() {
         </section>
 
         <section className="section-metrics" aria-label="Key performance indicators">
-          <div className="section-heading"><div><h2>At a glance</h2><p>Metrics for the selected year and active filters</p></div><span className="live-indicator"><span />{loading ? 'Updating' : error ? 'Connection unavailable' : 'Live from PostgreSQL'}</span></div>
+          <div className="section-heading"><div><h2>At a glance</h2><p>Metrics for the selected year and active filters</p></div><span className="live-indicator"><span />{loading ? 'Updating' : error ? 'Connection unavailable' : 'Live from SQLite'}</span></div>
           <div className="metric-grid">
             <MetricCard title="Schools reporting" value={loaded ? (summary?.school_count ?? 0).toLocaleString() : '—'} caption={loaded ? `${summary?.enrolled_students.toLocaleString() ?? '0'} enrolled students` : 'Waiting for data'} icon={School2} color="blue"/>
             <MetricCard title="Avg. mathematics" value={loaded ? formatPercent(summary?.avg_math) : '—'} caption={loaded ? `${summary?.math_reporting ?? 0} schools with math scores` : 'Waiting for data'} icon={BarChart3} color="teal"/>
