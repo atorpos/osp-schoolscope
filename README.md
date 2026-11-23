@@ -24,7 +24,7 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-Open **http://localhost:8080**. For a different host port, change `APP_PORT` in `.env`.
+Open **http://localhost:3008**. For a different host port, change `APP_PORT` in `.env`. If you already have a `.env` file, update its existing `APP_PORT` value to `3008` before restarting Compose.
 
 ```bash
 docker compose ps                       # Health and container status
@@ -41,7 +41,7 @@ docker compose down                     # Stop containers without deleting data
 2. The Node API waits until PostgreSQL is healthy, then creates two tables and indices if needed.
 3. The API seeds the **same 30 fictional school-year records** used in the earlier two-hour mock exercise. Seed inserts are idempotent; restarting does not duplicate or overwrite existing records.
 4. The React frontend is compiled and served by Nginx. Requests beginning with `/api/` are proxied internally to the Node API.
-5. Only Nginx port `8080` is published to the host. PostgreSQL and the backend are private to the Compose network.
+5. Only Nginx port `3008` is published to the host. PostgreSQL and the backend are private to the Compose network.
 
 ### Development without Docker
 
@@ -107,8 +107,8 @@ The directory, summary and trend routes accept `district`, `borough` and `search
 **Example:**
 
 ```bash
-curl 'http://localhost:8080/api/schools?year=2025-26&search=academy&sort=math_asc'
-curl 'http://localhost:8080/api/summary?year=2025-26'
+curl 'http://localhost:3008/api/schools?year=2025-26&search=academy&sort=math_asc'
+curl 'http://localhost:3008/api/summary?year=2025-26'
 ```
 
 ## Tests

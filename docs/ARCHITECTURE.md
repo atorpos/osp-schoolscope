@@ -3,7 +3,7 @@
 ```text
 Browser (React + TypeScript)
         |
-        | HTTP (same origin)    :8080
+        | HTTP (same origin)    :3008
         v
 Nginx — static Vite build
         |  /api/* reverse proxy

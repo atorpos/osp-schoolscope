@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 set -eu
-BASE="${1:-http://localhost:8080}"
+BASE="${1:-http://localhost:3008}"
 printf 'Checking SchoolScope at %s\n' "$BASE"
 curl --fail --silent --show-error "$BASE/api/health"
 printf '\n'
